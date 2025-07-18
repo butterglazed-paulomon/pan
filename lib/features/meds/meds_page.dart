@@ -1,42 +1,48 @@
-// lib/features/meds/meds_page.dart
-
 import 'package:flutter/material.dart';
-import 'meds_screen.dart'; // your current UI
-import 'track_screen.dart'; // will add this next
+import 'package:go_router/go_router.dart';
+import 'track_screen.dart';
 
-class MedsPage extends StatefulWidget {
+class MedsPage extends StatelessWidget {
   const MedsPage({super.key});
-
-  @override
-  State<MedsPage> createState() => _MedsPageState();
-}
-
-class _MedsPageState extends State<MedsPage> {
-  int _selectedIndex = 0;
-
-  final _screens = const [
-    MedsScreen(),
-    TrackScreen(), // we'll implement this in the next step
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.schedule),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_outline),
-            label: 'Track',
-          ),
-        ],
+      appBar: AppBar(title: const Text("Medication Overview")),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.teal),
+              child: Text('Pan Meds Menu', style: TextStyle(color: Colors.white, fontSize: 18)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Add / Edit Medication'),
+              onTap: () {
+                context.go('/meds'); // goes to MedsScreen
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.today),
+              title: const Text('Daily Check-In'),
+              onTap: () {
+                context.go('/meds/checkin');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Back to Home'),
+              onTap: () {
+                context.go('/');
+              },
+            ),
+          ],
+        ),
       ),
+      body: const TrackScreen(), // default screen
     );
   }
 }
