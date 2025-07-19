@@ -40,7 +40,7 @@ class NotificationService {
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // daily
+      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
@@ -52,11 +52,4 @@ class NotificationService {
     }
     return scheduled;
   }
-
-  static Future<void> requestPermissions() async {
-    await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions();
-
-      }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'lib/features/meds/meds_screen.dart';
+import 'package:pan/features/meds/meds_screen.dart';
 
 
 import 'core/models/mood_entry.dart';
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         useMaterial3: true,
       ),
-      home: const MedsScreen(),
+      home: MedsScreen(),
     );
   }
 }

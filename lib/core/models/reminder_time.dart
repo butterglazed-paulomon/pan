@@ -13,14 +13,16 @@ class ReminderTime {
 
   ReminderTime({required this.hour, required this.minute});
 
+  static ReminderTime fromTimeOfDay(TimeOfDay tod) {
+    return ReminderTime(hour: tod.hour, minute: tod.minute);
+  }
+
   TimeOfDay toTimeOfDay() {
-  return TimeOfDay(hour: hour, minute: minute);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   String formatted(BuildContext context) {
-    final time = toTimeOfDay();
-    return TimeOfDayFormat.H_colon_mm == MediaQuery.of(context).alwaysUse24HourFormat
-        ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
-        : time.format(context);
+    final localizations = MaterialLocalizations.of(context);
+    return localizations.formatTimeOfDay(toTimeOfDay());
   }
 }

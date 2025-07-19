@@ -1,10 +1,11 @@
 import 'package:hive/hive.dart';
 import 'reminder_time.dart';
-import 'package:flutter/material.dart'
+import 'package:flutter/material.dart';
 
 part 'medication.g.dart';
 
 @HiveType(typeId: 0)
+
 class Medication {
   @HiveField(0)
   final String name;

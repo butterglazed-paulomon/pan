@@ -6,7 +6,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/models/medication.dart';
 import '../../core/models/reminder_time.dart';
 import '../../core/services/notification_service.dart';
-import 'meds_provider.dart';
 
 final medsBoxProvider = FutureProvider<Box<Medication>>((ref) async {
   return Hive.openBox<Medication>('medications');
@@ -26,22 +25,20 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
   final _dosageController = TextEditingController();
   final _frequencyController = TextEditingController();
   final _notesController = TextEditingController();
-  int? _editingIndex;
 
   List<ReminderTime> _reminders = [];
+  int? _editingKey;
 
-  void _pickReminderTime(BuildContext context) async {
+  void _pickTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 8, minute: 0),
     );
     if (picked != null) {
-      setState(() => _reminders.add(ReminderTime(hour: picked.hour, minute: picked.minute)));
+      setState(() {
+        _reminders.add(ReminderTime.fromTimeOfDay(picked));
+      });
     }
-  }
-
-  void _removeReminder(int index) {
-    setState(() => _reminders.removeAt(index));
   }
 
   Future<void> _saveMedication(Box<Medication> box) async {
@@ -51,26 +48,26 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
         dose: _doseController.text.trim(),
         dosage: _dosageController.text.trim(),
         frequency: _frequencyController.text.trim(),
-        reminders: _reminders,
         notes: _notesController.text.trim().isNotEmpty
             ? _notesController.text.trim()
             : null,
+        reminders: _reminders,
       );
 
-      if (_editingIndex != null) {
-        final key = box.keyAt(_editingIndex!);
-        await box.put(key, med);
+      if (_editingKey != null) {
+        await box.put(_editingKey, med);
       } else {
         await box.add(med);
       }
 
-      for (var reminder in _reminders) {
+      for (final reminder in _reminders) {
+        final tod = reminder.toTimeOfDay();
         await NotificationService.scheduleDailyNotification(
           id: DateTime.now().millisecondsSinceEpoch % 100000,
           title: 'Time to take ${med.name}',
           body: 'Dose: ${med.dose} • ${med.dosage}',
-          hour: reminder.hour,
-          minute: reminder.minute,
+          hour: tod.hour,
+          minute: tod.minute,
         );
       }
 
@@ -80,10 +77,9 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
       _dosageController.clear();
       _frequencyController.clear();
       _notesController.clear();
-
       setState(() {
         _reminders = [];
-        _editingIndex = null;
+        _editingKey = null;
       });
     }
   }
@@ -96,8 +92,7 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
       appBar: AppBar(title: const Text('Medication Tracker 💊')),
       body: medsBoxAsync.when(
         data: (box) {
-          final med = entry.value;
-          final key = entry.key;
+          final entries = box.toMap().entries.toList().reversed;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -156,41 +151,50 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                           const Text('Reminders:'),
                           const SizedBox(width: 10),
                           ElevatedButton(
-                            onPressed: () => _pickReminderTime(context),
-                            child: const Text('Add Reminder'),
+                            onPressed: _pickTime,
+                            child: const Text('Add Reminder Time'),
                           ),
                         ],
                       ),
-                      ..._reminders.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final reminder = entry.value;
-                        return ListTile(
-                          title: Text(reminder.formatted(context)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _removeReminder(index),
-                          ),
-                        );
-                      }),
+                      Column(
+                        children: _reminders
+                            .map((reminder) => ListTile(
+                                  title: Text(reminder.formatted(context)),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      setState(() {
+                                        _reminders.remove(reminder);
+                                      });
+                                    },
+                                  ),
+                                ))
+                            .toList(),
+                      ),
                       const SizedBox(height: 10),
                       ElevatedButton.icon(
                         onPressed: () => _saveMedication(box),
                         icon: const Icon(Icons.save),
-                        label: const Text('Add Medication'),
+                        label: Text(_editingKey != null
+                            ? 'Update Medication'
+                            : 'Add Medication'),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
                 const Divider(),
-                const Text('Your Medications:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Your Medications:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 10),
-                ...meds.asMap().entries.map((entry) {
-                  final index = entry.key;
+                ...entries.map((entry) {
+                  final key = entry.key;
                   final med = entry.value;
 
                   return Dismissible(
-                    key: Key(key.toString()),
+                    key: Key('$key'),
                     background: Container(
                       color: Colors.red,
                       alignment: Alignment.centerRight,
@@ -208,20 +212,20 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                       child: ListTile(
                         onTap: () {
                           setState(() {
-                            _editingIndex = index;
+                            _editingKey = key;
                             _nameController.text = med.name;
                             _doseController.text = med.dose;
                             _dosageController.text = med.dosage;
                             _frequencyController.text = med.frequency;
                             _notesController.text = med.notes ?? '';
-                            _reminders = med.reminders;
+                            _reminders = List.from(med.reminders);
                           });
                         },
                         title: Text('${med.name} (${med.dose})'),
                         subtitle: Text(
                           'Dosage: ${med.dosage}\n'
                           'Frequency: ${med.frequency}'
-                          '${med.reminders.isNotEmpty ? '\nReminder: ${med.reminders.map((r) => r.formatted()).join(', ')}' : ''}'
+                          '${med.reminders.isNotEmpty ? '\nReminder: ${med.reminders.map((r) => r.formatted(context)).join(', ')}' : ''}'
                           '${med.notes != null ? '\nNote: ${med.notes}' : ''}',
                         ),
                         trailing: const Icon(Icons.edit),
