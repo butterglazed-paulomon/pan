@@ -1,63 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/models/medication.dart';
 import '../../core/models/med_log.dart';
-import '../../core/providers/log_box.dart';
+import '../../core/models/reminder_time.dart';
+
+final medsBoxProvider = FutureProvider<Box<Medication>>((ref) async {
+  return Hive.openBox<Medication>('medications');
+});
+
+final medLogBoxProvider = FutureProvider<Box<MedLog>>((ref) async {
+  return Hive.openBox<MedLog>('med_logs');
+});
 
 class CheckinScreen extends ConsumerWidget {
   const CheckinScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final medsBoxAsync = ref.watch(medsBoxProvider);
+    final logBoxAsync = ref.watch(medLogBoxProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Check-in')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Icon(Icons.add),
-      ),
-      body: ValueListenableBuilder(
-        valueListenable: Hive.box<MedLog>('med_logs').listenable(),
-        builder: (context, Box<MedLog> box, _) {
-          final logs = box.values.toList();
+      appBar: AppBar(title: const Text('Check In Medications')),
+      body: medsBoxAsync.when(
+        data: (medsBox) {
+          final meds = medsBox.toMap();
 
-          final Map<String, List<MedLog>> grouped = {};
-          for (final log in logs) {
-            grouped.putIfAbsent(log.medicationName, () => []).add(log);
-          }
+          return logBoxAsync.when(
+            data: (logBox) {
+              final now = DateTime.now();
+              final todayLogs = logBox.values.where((log) {
+                return log.takenTime?.year == now.year &&
+                    log.takenTime?.month == now.month &&
+                    log.takenTime?.day == now.day;
+              }).toList();
 
-          if (grouped.isEmpty) {
-            return const Center(child: Text('No logs found.'));
-          }
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: meds.entries.map((entry) {
+                  final medKey = entry.key;
+                  final med = entry.value;
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: grouped.entries.map((entry) {
-              final medName = entry.key;
-              final medLogs = entry.value;
+                  final alreadyTaken = todayLogs.any((log) =>
+                      log.medicationKey == med.name);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medName,
-                        style: Theme.of(context).textTheme.titleMedium,
+                  return Card(
+                    child: ListTile(
+                      title: Text('${med.name} (${med.dose})'),
+                      subtitle: Text(
+                        'Dosage: ${med.dosage}\n'
+                        'Frequency: ${med.frequency}'
+                        '${med.notes != null ? '\nNote: ${med.notes}' : ''}',
                       ),
-                      const SizedBox(height: 8),
-                      ...medLogs.map((log) => ListTile(
-                            title: Text(log.dose),
-                            subtitle: Text(log.timestamp.toLocal().toString()),
-                          )),
-                    ],
-                  ),
-                ),
+                      trailing: alreadyTaken
+                          ? const Icon(Icons.check, color: Colors.green)
+                          : ElevatedButton(
+                              onPressed: () async {
+                                final log = MedLog(
+                                  medicationKey: medKey,
+                                  takenTime: DateTime.now(),
+                                  scheduledTime: DateTime.now(),
+                                );
+                                await logBox.add(log);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          '${med.name} marked as taken')),
+                                );
+                              },
+                              child: const Text('Mark as Taken'),
+                            ),
+                    ),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error loading logs: $e')),
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }

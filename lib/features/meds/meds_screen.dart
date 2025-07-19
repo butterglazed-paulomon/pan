@@ -125,9 +125,9 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
             data: (logBox) {
               final today = DateTime.now();
               final todayLogs = logBox.values.where((log) {
-                return log.timestamp.year == today.year &&
-                    log.timestamp.month == today.month &&
-                    log.timestamp.day == today.day;
+                return log.takenTime?.year == today.year &&
+                    log.takenTime?.month == today.month &&
+                    log.takenTime?.day == today.day;
               }).toList();
 
               return SingleChildScrollView(
