@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/meds/checkin_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/mood_tracker/mood_screen.dart';
@@ -22,6 +23,7 @@ final panRouter = GoRouter(
         GoRoute(path: '/meds', builder: (context, state) => const MedsScreen()),
         GoRoute(path: '/journal', builder: (context, state) => const JournalScreen()),
         GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+        GoRoute(path: '/meds/checkin', builder: (context, state) => const CheckinScreen()),
       ],
     ),
   ],

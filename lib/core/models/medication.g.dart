@@ -23,13 +23,14 @@ class MedicationAdapter extends TypeAdapter<Medication> {
       frequency: fields[3] as String,
       reminders: (fields[4] as List).cast<ReminderTime>(),
       notes: fields[5] as String?,
+      intervalHours: fields[6] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Medication obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class MedicationAdapter extends TypeAdapter<Medication> {
       ..writeByte(4)
       ..write(obj.reminders)
       ..writeByte(5)
-      ..write(obj.notes);
+      ..write(obj.notes)
+      ..writeByte(6)
+      ..write(obj.intervalHours);
   }
 
   @override

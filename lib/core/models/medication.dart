@@ -25,6 +25,9 @@ class Medication {
   @HiveField(5)
   final String? notes;
 
+  @HiveField(6)
+  final int? intervalHours;
+  
   Medication({
     required this.name,
     required this.dose,
@@ -32,6 +35,7 @@ class Medication {
     required this.frequency,
     required this.reminders,
     this.notes,
+    this.intervalHours,
   });
 
   static ReminderTime timeOfDayToReminder(TimeOfDay tod) {

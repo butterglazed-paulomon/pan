@@ -44,6 +44,47 @@ class NotificationService {
     );
   }
 
+  static Future<void> scheduleRepeatingNotification({
+    required int id,
+    required String title,
+    required String body,
+    required int intervalHours,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    final next = now.add(Duration(hours: intervalHours));
+
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      next,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'pan_interval_channel',
+          'Interval-Based Reminders',
+          channelDescription: 'Reminders at set hourly intervals',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: null, // no daily repeat
+      payload: 'interval',
+    );
+  }
+
+  static Future<void> cancelNotification(int id) async {
+    await _notifications.cancel(id);
+  } 
+
+  static Future<void> cancelNotificationsForMedication(int medKey, int reminderCount) async {
+    for (int i = 0; i < reminderCount; i++) {
+      await _notifications.cancel(medKey * 10 + i);
+    }
+  }
+
   static tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
@@ -52,4 +93,5 @@ class NotificationService {
     }
     return scheduled;
   }
+  
 }

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:pan/features/meds/meds_screen.dart';
 
-
-import 'core/models/mood_entry.dart';
-import 'core/models/reminder_time.dart';
 import 'core/models/med_log.dart';
 import 'core/models/medication.dart';
+import 'core/models/reminder_time.dart';
 import 'core/services/notification_service.dart';
-import 'app/router.dart';
-import 'app/theme.dart';
+import 'app/router.dart'; // panRouter
+import 'app/theme.dart'; // PanTheme
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -20,10 +17,13 @@ void main() async {
 
   Hive.registerAdapter(MedicationAdapter());
   Hive.registerAdapter(ReminderTimeAdapter());
+  Hive.registerAdapter(MedLogAdapter());
 
   await Hive.openBox<Medication>('medications');
   await Hive.openBox<MedLog>('med_logs');
+
   await NotificationService.init();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -32,15 +32,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Pan Mental Health Companion',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        useMaterial3: true,
-      ),
-      home: MedsScreen(),
+      routerConfig: panRouter,
+      theme: PanTheme.light,
+      darkTheme: PanTheme.dark,
+      themeMode: ThemeMode.system,
     );
   }
 }
