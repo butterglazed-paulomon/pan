@@ -8,7 +8,7 @@ part of 'reminder_time.dart';
 
 class ReminderTimeAdapter extends TypeAdapter<ReminderTime> {
   @override
-  final int typeId = 3;
+  final int typeId = 1;
 
   @override
   ReminderTime read(BinaryReader reader) {
@@ -17,8 +17,8 @@ class ReminderTimeAdapter extends TypeAdapter<ReminderTime> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return ReminderTime(
-      fields[0] as int,
-      fields[1] as int,
+      hour: fields[0] as int,
+      minute: fields[1] as int,
     );
   }
 

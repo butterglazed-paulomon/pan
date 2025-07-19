@@ -52,4 +52,11 @@ class NotificationService {
     }
     return scheduled;
   }
+
+  static Future<void> requestPermissions() async {
+    await _notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions();
+
+      }
 }

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import '../../core/models/medication.dart';
+import '../../core/models/reminder_time.dart';
 import '../../core/services/notification_service.dart';
-import 'package:pan/features/meds/meds_provider.dart';
+import 'meds_provider.dart';
 
 final medsBoxProvider = FutureProvider<Box<Medication>>((ref) async {
   return Hive.openBox<Medication>('medications');
@@ -25,17 +27,21 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
   final _frequencyController = TextEditingController();
   final _notesController = TextEditingController();
   int? _editingIndex;
-  bool _setReminder = false;
-  TimeOfDay _reminderTime = TimeOfDay(hour: 8, minute: 0);
+
+  List<ReminderTime> _reminders = [];
 
   void _pickReminderTime(BuildContext context) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _reminderTime,
+      initialTime: const TimeOfDay(hour: 8, minute: 0),
     );
     if (picked != null) {
-      setState(() => _reminderTime = picked);
+      setState(() => _reminders.add(ReminderTime(hour: picked.hour, minute: picked.minute)));
     }
+  }
+
+  void _removeReminder(int index) {
+    setState(() => _reminders.removeAt(index));
   }
 
   Future<void> _saveMedication(Box<Medication> box) async {
@@ -45,10 +51,7 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
         dose: _doseController.text.trim(),
         dosage: _dosageController.text.trim(),
         frequency: _frequencyController.text.trim(),
-        remind: _setReminder,
-        reminderTimeString: _setReminder
-            ? Medication.formatTimeOfDay(_reminderTime)
-            : null,
+        reminders: _reminders,
         notes: _notesController.text.trim().isNotEmpty
             ? _notesController.text.trim()
             : null,
@@ -61,13 +64,13 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
         await box.add(med);
       }
 
-      if (_setReminder) {
+      for (var reminder in _reminders) {
         await NotificationService.scheduleDailyNotification(
           id: DateTime.now().millisecondsSinceEpoch % 100000,
           title: 'Time to take ${med.name}',
           body: 'Dose: ${med.dose} • ${med.dosage}',
-          hour: _reminderTime.hour,
-          minute: _reminderTime.minute,
+          hour: reminder.hour,
+          minute: reminder.minute,
         );
       }
 
@@ -79,8 +82,7 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
       _notesController.clear();
 
       setState(() {
-        _setReminder = false;
-        _reminderTime = const TimeOfDay(hour: 8, minute: 0);
+        _reminders = [];
         _editingIndex = null;
       });
     }
@@ -94,7 +96,8 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
       appBar: AppBar(title: const Text('Medication Tracker 💊')),
       body: medsBoxAsync.when(
         data: (box) {
-          final meds = box.values.toList().reversed.toList();
+          final med = entry.value;
+          final key = entry.key;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -148,24 +151,27 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                         maxLines: 2,
                       ),
                       const SizedBox(height: 10),
-                      SwitchListTile(
-                        title: const Text('Set Daily Reminder?'),
-                        value: _setReminder,
-                        onChanged: (val) {
-                          setState(() => _setReminder = val);
-                        },
+                      Row(
+                        children: [
+                          const Text('Reminders:'),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () => _pickReminderTime(context),
+                            child: const Text('Add Reminder'),
+                          ),
+                        ],
                       ),
-                      if (_setReminder)
-                        Row(
-                          children: [
-                            Text('Time: ${_reminderTime.format(context)}'),
-                            const SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed: () => _pickReminderTime(context),
-                              child: const Text('Pick Time'),
-                            ),
-                          ],
-                        ),
+                      ..._reminders.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final reminder = entry.value;
+                        return ListTile(
+                          title: Text(reminder.formatted(context)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () => _removeReminder(index),
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 10),
                       ElevatedButton.icon(
                         onPressed: () => _saveMedication(box),
@@ -184,7 +190,7 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                   final med = entry.value;
 
                   return Dismissible(
-                    key: Key(med.key.toString()),
+                    key: Key(key.toString()),
                     background: Container(
                       color: Colors.red,
                       alignment: Alignment.centerRight,
@@ -193,7 +199,7 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                     ),
                     direction: DismissDirection.endToStart,
                     onDismissed: (_) async {
-                      await box.delete(med.key);
+                      await box.delete(key);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('${med.name} deleted')),
                       );
@@ -208,15 +214,16 @@ class _MedsScreenState extends ConsumerState<MedsScreen> {
                             _dosageController.text = med.dosage;
                             _frequencyController.text = med.frequency;
                             _notesController.text = med.notes ?? '';
-                            _setReminder = med.remind;
-                            _reminderTime = med.reminderTime ?? const TimeOfDay(hour: 8, minute: 0);
+                            _reminders = med.reminders;
                           });
                         },
                         title: Text('${med.name} (${med.dose})'),
-                        subtitle: Text('Dosage: ${med.dosage}\n'
-                            'Frequency: ${med.frequency}'
-                            '${med.remind && med.reminderTime != null ? '\nReminder: ${med.reminderTime!.format(context)}' : ''}'
-                            '${med.notes != null ? '\nNote: ${med.notes}' : ''}'),
+                        subtitle: Text(
+                          'Dosage: ${med.dosage}\n'
+                          'Frequency: ${med.frequency}'
+                          '${med.reminders.isNotEmpty ? '\nReminder: ${med.reminders.map((r) => r.formatted()).join(', ')}' : ''}'
+                          '${med.notes != null ? '\nNote: ${med.notes}' : ''}',
+                        ),
                         trailing: const Icon(Icons.edit),
                       ),
                     ),

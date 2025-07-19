@@ -1,30 +1,28 @@
-import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'reminder_time.dart';
+import 'package:flutter/material.dart'
 
 part 'medication.g.dart';
 
 @HiveType(typeId: 0)
-class Medication extends HiveObject {
+class Medication {
   @HiveField(0)
-  String name;
+  final String name;
 
   @HiveField(1)
-  String dose;
+  final String dose;
 
   @HiveField(2)
-  String dosage;
+  final String dosage;
 
   @HiveField(3)
-  String frequency;
+  final String frequency;
 
   @HiveField(4)
-  List<ReminderTime> reminders; // New: multiple times per day
+  final List<ReminderTime> reminders;
 
   @HiveField(5)
-  String? notes;
-
-  @HiveField(6)
-  DateTime createdAt;
+  final String? notes;
 
   Medication({
     required this.name,
@@ -33,6 +31,9 @@ class Medication extends HiveObject {
     required this.frequency,
     required this.reminders,
     this.notes,
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  });
+
+  static ReminderTime timeOfDayToReminder(TimeOfDay tod) {
+    return ReminderTime(hour: tod.hour, minute: tod.minute);
+  }
 }

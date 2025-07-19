@@ -1,8 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 part 'reminder_time.g.dart';
 
-@HiveType(typeId: 3)
+@HiveType(typeId: 1)
 class ReminderTime {
   @HiveField(0)
   final int hour;
@@ -10,13 +11,16 @@ class ReminderTime {
   @HiveField(1)
   final int minute;
 
-  ReminderTime(this.hour, this.minute);
+  ReminderTime({required this.hour, required this.minute});
 
-  String format() {
-    final time = TimeOfDay(hour: hour, minute: minute);
-    final localizations = MaterialLocalizations.of(navigatorKey.currentContext!);
-    return localizations.formatTimeOfDay(time);
+  TimeOfDay toTimeOfDay() {
+  return TimeOfDay(hour: hour, minute: minute);
   }
 
-  TimeOfDay toTimeOfDay() => TimeOfDay(hour: hour, minute: minute);
+  String formatted(BuildContext context) {
+    final time = toTimeOfDay();
+    return TimeOfDayFormat.H_colon_mm == MediaQuery.of(context).alwaysUse24HourFormat
+        ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+        : time.format(context);
+  }
 }
