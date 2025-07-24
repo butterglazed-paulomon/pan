@@ -1,4 +1,6 @@
 name: pan
+description: pan 
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -21,3 +23,14 @@ dependencies:
 dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.6
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/pan_icon.png"
+
+flutter: 
+  uses-material-design: true
+  assets:
+    - assets/icon/pan_icon.png

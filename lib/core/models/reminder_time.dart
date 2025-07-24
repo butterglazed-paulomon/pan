@@ -25,4 +25,9 @@ class ReminderTime {
     final localizations = MaterialLocalizations.of(context);
     return localizations.formatTimeOfDay(toTimeOfDay());
   }
+
+  DateTime toDateTime(DateTime baseDate) {
+    return DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
+  }
+
 }
